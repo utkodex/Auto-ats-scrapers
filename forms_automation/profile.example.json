@@ -1,0 +1,112 @@
+{
+  "resume": "path/to/your_resume.pdf",
+  "cover_letter": null,
+  "first_name": "First",
+  "last_name": "Last",
+  "preferred_name": "First",
+  "email": "you@example.com",
+  "phone_country": "India",
+  "phone": "0000000000",
+  "location": "City, State, Country",
+  "education": [
+    {
+      "school": "Your University",
+      "degree": "Bachelor's Degree",
+      "discipline": "Computer Science"
+    }
+  ],
+  "rules": [
+    {
+      "match": "linkedin",
+      "answer": "https://www.linkedin.com/in/your-handle"
+    },
+    {
+      "match": "github",
+      "answer": "https://github.com/your-handle"
+    },
+    {
+      "match": "website|portfolio|personal (site|url)",
+      "answer": "https://github.com/your-handle"
+    },
+    {
+      "match": "^full name|^(your )?name$",
+      "answer": "First Last"
+    },
+    {
+      "match": "prefer(red)? (first )?name|name you.?d prefer",
+      "answer": "First"
+    },
+    {
+      "match": "^(what is |what's )?(your )?(current|most recent) (company|employer)( name)?\\??$",
+      "answer": "Current Company"
+    },
+    {
+      "match": "^(what is |what's )?(your )?(current|most recent) (job )?(title|role)\\??$",
+      "answer": "Current Title"
+    },
+    {
+      "match": "how did you (hear|find|learn)|where did you (hear|find)|referral source|^source$",
+      "answer": "Linkedin"
+    },
+    {
+      "match": "country of (residence|citizenship)|current country|country (do )?you (live|reside)|which country",
+      "answer": "India"
+    },
+    {
+      "match": "where do you (intend|plan) to (work|be based)|where are you (currently )?(located|based)|current location",
+      "answer": "City, State, Country"
+    },
+    {
+      "match": "u\\.?s\\.? citizen",
+      "answer": "No"
+    },
+    {
+      "match": "security clearance",
+      "answer": "No"
+    },
+    {
+      "match": "sponsor",
+      "answer": "Yes"
+    },
+    {
+      "match": "authori[sz]ed to work|legally (authori[sz]ed|eligible|able) to work|work authori[sz]ation|right to work|eligible to work",
+      "answer": "No"
+    },
+    {
+      "match": "relocat",
+      "answer": "No"
+    },
+    {
+      "match": "(open|willing|able) to work(ing)? remote(ly)?|interested in (a )?remote",
+      "answer": "Yes"
+    },
+    {
+      "match": "(ever|previously) (worked|been employed|consulted) (for|at|with)",
+      "answer": "No"
+    },
+    {
+      "match": "^gender|gender identity",
+      "answer": "Male"
+    },
+    {
+      "match": "hispanic|latin[oa]",
+      "answer": "No"
+    },
+    {
+      "match": "\\brace\\b|ethnicity",
+      "answer": "Asian"
+    },
+    {
+      "match": "veteran",
+      "answer": "I am not a protected veteran"
+    },
+    {
+      "match": "disability",
+      "answer": "No, I do not have a disability"
+    },
+    {
+      "match": "privacy|consent|acknowledge|i agree|i certify|i confirm|terms",
+      "answer": "Yes"
+    }
+  ]
+}

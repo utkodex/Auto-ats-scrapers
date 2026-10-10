@@ -128,3 +128,15 @@ workday_discovery_*.csv
 **/companies/
 **/processed_companies.txt
 **/last_run.txt
+
+# examples/ai_job_queries.py dataset cache
+.ats_cache/
+
+
+credentials.json
+imagerror
+
+# forms_automation personal data
+forms_automation/profile.json
+forms_automation/answers.json*
+forms_automation/.chrome-profile/

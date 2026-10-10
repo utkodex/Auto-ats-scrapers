@@ -68,6 +68,10 @@ scrapers = [
 parquet = [
     "pyarrow>=15.0",
 ]
+# Google Sheets output for examples/ai_job_queries.py.
+sheets = [
+    "gspread>=6.0",
+]
 all = [
     "ats-scrapers[scrapers,parquet]",
 ]
