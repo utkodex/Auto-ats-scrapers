@@ -222,13 +222,34 @@ def ask_question(question: str, options: list[str] | None = None, required: bool
     return QuestionDialog(question, options, required, multi, kind, job).run()
 
 
-def notice(title: str, heading: str, lines: list[str], buttons: list[str]) -> str:
-    """Message window; returns the label of the button pressed (last one on close)."""
+def notice(title: str, heading: str, lines: list[str], buttons: list[str],
+           poll=None, poll_ms: int = 1500) -> str:
+    """Message window; returns the label of the button pressed (last one on close).
+
+    poll: optional callable run every poll_ms while the window is open; the text it
+    returns (if any) is shown in a status line - e.g. "Security code entered".
+    """
     root = _window(title, topmost=False)
     pressed = {"label": buttons[-1]}
     ttk.Label(root, text=heading, font=FONT_BOLD, wraplength=WIDTH, justify="left").pack(anchor="w")
     for line in lines:
         ttk.Label(root, text=line, font=FONT, wraplength=WIDTH, justify="left").pack(anchor="w", pady=1)
+    status = ttk.Label(root, text="", font=("Segoe UI", 10, "bold"), foreground="#1565c0",
+                       wraplength=WIDTH, justify="left")
+    status.pack(anchor="w", pady=(8, 0))
+
+    def tick() -> None:
+        try:
+            message = poll()
+        except Exception as exc:  # never let a polling error close the window
+            message = f"(status check failed: {exc})"
+        if message and message != status.cget("text"):
+            status.configure(text=message)
+            root.lift()  # bring the update to the user's attention
+        root.after(poll_ms, tick)
+
+    if poll is not None:
+        root.after(poll_ms, tick)
     bar = ttk.Frame(root)
     bar.pack(fill="x", pady=(14, 0))
 
@@ -246,3 +267,58 @@ def notice(title: str, heading: str, lines: list[str], buttons: list[str]) -> st
     root.bind("<Return>", lambda _e: press(buttons[0]))
     _show(root, first)
     return pressed["label"]
+
+
+# Cover-letter review actions
+UPLOAD, REGENERATE, SKIP_LETTER = "upload", "regenerate", "skip"
+
+
+def review_letter(heading: str, letter: str, warnings: list[str]) -> tuple[str, str]:
+    """Editable cover-letter preview with the automatic checks listed above it.
+
+    Returns (UPLOAD, final_text), (REGENERATE, text) or (SKIP_LETTER, text).
+    """
+    root = _window("Cover letter - review before upload")
+    result = {"action": SKIP_LETTER, "text": letter}
+    ttk.Label(root, text=heading, font=FONT_BOLD, wraplength=760, justify="left").pack(anchor="w")
+
+    if warnings:
+        box = ttk.Frame(root, padding=(0, 6, 0, 6))
+        box.pack(fill="x")
+        ttk.Label(box, text="Check these before uploading:", font=("Segoe UI", 10, "bold"),
+                  foreground="#9a5b00").pack(anchor="w")
+        for warning in warnings:
+            ttk.Label(box, text=f"\u2022 {warning}", font=FONT_SMALL, foreground="#9a5b00",
+                      wraplength=760, justify="left").pack(anchor="w")
+    else:
+        ttk.Label(root, text="No problems found by the automatic checks - still read it through.",
+                  font=FONT_SMALL, foreground="#2e7d32").pack(anchor="w", pady=(4, 6))
+
+    frame = ttk.Frame(root)
+    frame.pack(fill="both", expand=True)
+    text = tk.Text(frame, width=96, height=22, font=("Segoe UI", 10), wrap="word", undo=True,
+                   padx=8, pady=6)
+    scroll = ttk.Scrollbar(frame, command=text.yview)
+    text.configure(yscrollcommand=scroll.set)
+    text.pack(side="left", fill="both", expand=True)
+    scroll.pack(side="right", fill="y")
+    text.insert("1.0", letter)
+
+    ttk.Label(root, text="Edit the letter directly. Upload saves it as a PDF and attaches it "
+                         "to the Cover Letter field (Ctrl+Enter).",
+              font=FONT_SMALL, foreground="#666").pack(anchor="w", pady=(6, 10))
+
+    def finish(action: str) -> None:
+        result["action"], result["text"] = action, text.get("1.0", "end").strip()
+        root.destroy()
+
+    bar = ttk.Frame(root)
+    bar.pack(fill="x")
+    ttk.Button(bar, text="Upload as PDF", style="Accent.TButton",
+               command=lambda: finish(UPLOAD)).pack(side="right")
+    ttk.Button(bar, text="Regenerate", command=lambda: finish(REGENERATE)).pack(side="right", padx=6)
+    ttk.Button(bar, text="Skip cover letter", command=lambda: finish(SKIP_LETTER)).pack(side="left")
+    root.protocol("WM_DELETE_WINDOW", lambda: finish(SKIP_LETTER))
+    root.bind("<Control-Return>", lambda _e: finish(UPLOAD))
+    _show(root, text)
+    return result["action"], result["text"]

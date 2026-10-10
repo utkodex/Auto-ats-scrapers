@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Llama Heads Report</title>
+<style>
+  :root {
+    --bg: #fafaf8; --surface: #ffffff; --text: #1d1d1b; --muted: #5f5f5a;
+    --border: #e2e1dc; --accent: #2f5bd3; --accent-soft: #e8eefc;
+    --good: #136b4a; --good-soft: #e3f4ec; --bad: #a12828; --bad-soft: #fbe9e9;
+    --meh: #8a5a00; --meh-soft: #fbf1dc; --code: #f2f1ed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514; --surface: #1d1d1b; --text: #ecebe6; --muted: #a3a29b;
+      --border: #34332f; --accent: #8aa8ff; --accent-soft: #1f2a46;
+      --good: #7fd8b1; --good-soft: #173328; --bad: #f2a3a3; --bad-soft: #3c1f1f;
+      --meh: #f0c674; --meh-soft: #3a2f17; --code: #262624;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --surface: #1d1d1b; --text: #ecebe6; --muted: #a3a29b;
+    --border: #34332f; --accent: #8aa8ff; --accent-soft: #1f2a46;
+    --good: #7fd8b1; --good-soft: #173328; --bad: #f2a3a3; --bad-soft: #3c1f1f;
+    --meh: #f0c674; --meh-soft: #3a2f17; --code: #262624;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 48px 16px 80px; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 1.3rem; margin: 48px 0 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 1.05rem; margin: 24px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .lede { font-size: 1.05rem; background: var(--accent-soft); border-left: 4px solid var(--accent);
+          padding: 16px 20px; border-radius: 6px; }
+  code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: .9em; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 20px 0; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat .n { font-size: 1.7rem; font-weight: 700; line-height: 1.1; }
+  .stat .l { color: var(--muted); font-size: .88rem; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; background: var(--surface); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+  td.m { font-family: ui-monospace, Consolas, monospace; font-size: .84rem; white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.best td { background: var(--good-soft); }
+  .b { display: inline-block; font-size: .78rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .b.good { background: var(--good-soft); color: var(--good); }
+  .b.bad { background: var(--bad-soft); color: var(--bad); }
+  .b.meh { background: var(--meh-soft); color: var(--meh); }
+  .b.info { background: var(--accent-soft); color: var(--accent); }
+  .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .card h3 { margin-top: 0; }
+  .card.bad { border-top: 4px solid var(--bad); }
+  .card.good { border-top: 4px solid var(--good); }
+  .card ul { padding-left: 20px; margin: 8px 0 0; }
+  .note { color: var(--muted); font-size: .9rem; }
+  ol li, ul li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Llama Heads Report</h1>
+<p class="sub">Creating classification heads for the existing Greenhouse question database with Llama 3.1 8B only · 2026-10-10</p>
+
+<p class="lede">
+  <strong>In short:</strong> Llama 8B <em>can</em> create good heads for our 18 questions, but only when
+  two things are true: the prompt clearly says <strong>“one head = one answer”</strong>, and the
+  temperature is <strong>0</strong>. With the plain prompt it lumps unrelated questions together, and at
+  higher temperature its output changes a lot from run to run.
+  <br><br>
+  <strong>Consistency check:</strong> Prompt B at temperature 0 was run <strong>10 more times</strong>.
+  The grouping was <strong>18 / 18 in all 10 runs</strong>, with the same head names every time.
+  The <code>reuse</code> / <code>generate</code> mode is <strong>not</strong> reliable: it was 16 / 18 in one run and
+  13 / 18 in the other nine. So use Llama for grouping and naming, and set the mode with rules and the GUI.
+</p>
+
+<div class="stats">
+  <div class="stat"><div class="n">18</div><div class="l">questions in <code>answers.json</code></div></div>
+  <div class="stat"><div class="n">19</div><div class="l">Llama runs (9 comparing prompts + 10 consistency runs)</div></div>
+  <div class="stat"><div class="n">10 / 10</div><div class="l">Prompt B runs that grouped all 18 questions correctly</div></div>
+  <div class="stat"><div class="n">13–16 / 18</div><div class="l">modes (reuse / generate) correct, which is not reliable</div></div>
+  <div class="stat"><div class="n">32–93 s</div><div class="l">time per full run on this PC</div></div>
+</div>
+
+<h2>What was tested</h2>
+<div class="table-wrap">
+<table>
+  <tbody>
+    <tr><th>Model</th><td><code>llama3.1:8b</code> (Q4_K_M), running locally in Ollama, the same model <code>cover_letter.py</code> uses</td></tr>
+    <tr><th>Input</th><td>Only the question text and type of all 18 questions. <strong>Stored answers were not sent</strong> and are not in this report.</td></tr>
+    <tr><th>Asked for</th><td>A list of heads. Each head has an <code>id</code>, a one-line <code>description</code>, a <code>mode</code> (<code>reuse</code> or <code>generate</code>) and the question ids in it.</td></tr>
+    <tr><th>Output format</th><td>JSON forced with Ollama's structured output (a JSON schema), so the shape is always valid</td></tr>
+    <tr><th>Prompt A</th><td>Plain: “group questions with the same meaning into heads”, plus the sex / gender example</td></tr>
+    <tr><th>Prompt B</th><td>Prompt A plus one strict rule: <em>“A head stores ONE answer. Two questions share a head only if the same person would give the same answer to both. When unsure, make a separate head.”</em></td></tr>
+    <tr><th>Temperatures</th><td>0 (as predictable as possible) and 0.7 (more random), to see how stable the output is</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>How to read the results</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Check</th><th>What it means in simple words</th><th>Why it matters</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Every question placed once</strong></td><td>Each question is in exactly one head: not missing, not in two heads</td><td>A missing question has no head. A question in two heads gives two answers.</td></tr>
+    <tr><td><strong>Wrong merges</strong></td><td>Questions that need <em>different</em> answers were put in the same head</td><td>The worst mistake: the system would copy your university name into the “graduation date” box.</td></tr>
+    <tr><td><strong>Mode mistakes</strong></td><td>A question marked <code>reuse</code> when it should be written fresh, or the other way round</td><td>Wrong mode means copying an essay, or asking the LLM to “write” a yes/no answer.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Results of all 9 runs</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Run</th><th>Prompt</th><th>Temp</th><th>Time</th><th>Heads</th><th>Every question placed once?</th><th>Wrong merges</th><th>Mode mistakes</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>A</td><td class="num">0</td><td class="num">51 s</td><td class="num">10</td><td><span class="b good">Yes</span></td><td><span class="b bad">3 heads, 11 questions</span></td><td><span class="b meh">2</span></td></tr>
+    <tr><td>2</td><td>A</td><td class="num">0</td><td class="num">41 s</td><td class="num">10</td><td><span class="b good">Yes</span></td><td><span class="b bad">3 heads, 11 questions</span></td><td><span class="b meh">2</span></td></tr>
+    <tr><td>3</td><td>A</td><td class="num">0.7</td><td class="num">35 s</td><td class="num">8</td><td><span class="b good">Yes</span></td><td><span class="b bad">3 heads, 13 questions</span></td><td><span class="b bad">9</span></td></tr>
+    <tr><td>4</td><td>A</td><td class="num">0.7</td><td class="num">32 s</td><td class="num">7</td><td><span class="b bad">No, 1 question missing</span></td><td><span class="b bad">3 heads, 13 questions</span></td><td><span class="b bad">6</span></td></tr>
+    <tr><td>5</td><td>A</td><td class="num">0.7</td><td class="num">48 s</td><td class="num">11</td><td><span class="b good">Yes</span></td><td><span class="b bad">2 heads, 9 questions</span></td><td><span class="b bad">11</span></td></tr>
+    <tr class="best"><td><strong>6 ★</strong></td><td><strong>B</strong></td><td class="num"><strong>0</strong></td><td class="num">78 s</td><td class="num">18</td><td><span class="b good">Yes</span></td><td><span class="b good">None</span></td><td><span class="b meh">2</span></td></tr>
+    <tr><td>7</td><td>B</td><td class="num">0.7</td><td class="num">93 s</td><td class="num">21</td><td><span class="b bad">No, 2 questions split into several heads</span></td><td><span class="b good">None</span></td><td><span class="b bad">4</span></td></tr>
+    <tr><td>8</td><td>B</td><td class="num">0.7</td><td class="num">91 s</td><td class="num">21</td><td><span class="b bad">No, 2 questions split into several heads</span></td><td><span class="b good">None</span></td><td><span class="b bad">4</span></td></tr>
+    <tr><td>9</td><td>B</td><td class="num">0.7</td><td class="num">83 s</td><td class="num">18</td><td><span class="b good">Yes</span></td><td><span class="b good">None</span></td><td><span class="b bad">8</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p class="note">★ Run 6 is the best output and is shown in full below. Runs 1 and 2 (same prompt, temperature 0) gave the same grouping; only one head name changed (<code>previous_employment</code> vs <code>previous_work</code>).</p>
+
+<h2>Prompt A vs Prompt B</h2>
+<div class="compare">
+  <div class="card bad">
+    <h3>Prompt A (plain): groups by broad topic</h3>
+    <p>Llama understood “head” as a <em>category</em>, not as <em>one answer</em>. Typical merges:</p>
+    <ul>
+      <li><code>identity</code> = transgender + sexual orientation + ethnicity (3 different answers)</li>
+      <li><code>previous_employment</code> = current company name + “worked for Datacor before?”</li>
+      <li><code>education</code> = enrolled? + start/end dates + location + university + degree + graduation date (6 different answers)</li>
+    </ul>
+    <p>Only <strong>7 of 18</strong> questions ended up in a head that would give the right answer.</p>
+  </div>
+  <div class="card good">
+    <h3>Prompt B (strict): one head per answer</h3>
+    <p>After adding the “one head stores one answer” rule, Llama gave every question its own correct head at temperature 0:</p>
+    <ul>
+      <li>transgender, sexual orientation and ethnicity are separate</li>
+      <li>university, degree, graduation date, start date and location are separate</li>
+      <li>No question missing, none duplicated</li>
+    </ul>
+    <p><strong>18 of 18</strong> grouped correctly. The cost is about 30 s more per run, because the answer is longer.</p>
+  </div>
+</div>
+
+<h2>Best output in full (Prompt B, temperature 0)</h2>
+<p>These are the heads Llama created, checked one by one. Answers are left out on purpose.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Question (short)</th><th>Head Llama created</th><th>Mode</th><th>Verdict</th><th>Comment</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Willing to travel up to 20%?</td><td class="m">travel</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>2</td><td>Security clearance level</td><td class="m">security_clearance</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>3</td><td>“I agree” to Reddit's privacy policy</td><td class="m">agreement</td><td>generate</td><td><span class="b bad">Wrong mode</span></td><td>A consent tick-box should be <code>reuse</code> (always “I agree”), not written fresh</td></tr>
+    <tr><td>4</td><td>Person of transgender experience?</td><td class="m">transgender_status</td><td>reuse</td><td><span class="b good">Good</span></td><td>“What is your sex / gender?” is a different question; it will get its own <code>gender</code> head the first time it appears</td></tr>
+    <tr><td>5</td><td>Sexual orientation</td><td class="m">sexual_orientation</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>6</td><td>Up to 2 ethnicities</td><td class="m">ethnicity</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>7</td><td>Current / most recent company</td><td class="m">current_company</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>8</td><td>Worked for Datacor before?</td><td class="m">datacor_affiliation</td><td>reuse</td><td><span class="b meh">Rename</span></td><td>Named after one company. Better: <code>worked_here_before</code>, so other companies' versions of the question fit</td></tr>
+    <tr><td>9</td><td>Enrolled in a Master's / PhD?</td><td class="m">education_status</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>10</td><td>Earliest start and latest end date</td><td class="m">start_date</td><td>reuse</td><td><span class="b meh">Rename</span></td><td>The question asks for both dates. Better: <code>availability_dates</code></td></tr>
+    <tr><td>11</td><td>Location during internship</td><td class="m">location</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>12</td><td>University</td><td class="m">university</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>13</td><td>Degree, major(s), minor(s)</td><td class="m">degree</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>14</td><td>Expected graduation date</td><td class="m">graduation_date</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>15</td><td>Who referred you</td><td class="m">referral</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+    <tr><td>16</td><td>If you selected other, more details</td><td class="m">other_details</td><td>reuse</td><td><span class="b bad">Wrong mode</span></td><td>We decided these are <code>generate</code>: the meaning depends on the question before it</td></tr>
+    <tr><td>17</td><td>What you want to gain from an internship</td><td class="m">motivation</td><td>generate</td><td><span class="b good">Good</span></td><td>Handled like a cover letter</td></tr>
+    <tr><td>18</td><td>Veteran / served in the military?</td><td class="m">veteran_status</td><td>reuse</td><td><span class="b good">Good</span></td><td></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Score for the best run</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Check</th><th>Result</th><th></th></tr></thead>
+  <tbody>
+    <tr><td>Grouping (right questions together)</td><td class="num">18 / 18</td><td><span class="b good">100%</span></td></tr>
+    <tr><td>Mode (reuse vs generate)</td><td class="num">16 / 18</td><td><span class="b meh">89%</span></td></tr>
+    <tr><td>Head names that work for any company</td><td class="num">16 / 18</td><td><span class="b meh">89%</span></td></tr>
+    <tr><td>Fully correct (all three)</td><td class="num">14 / 18</td><td><span class="b meh">78%</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p class="note">This was the best of all runs. Most repeat runs scored 13 / 18 on mode; see the consistency check below.</p>
+
+<h2>Consistency check: Prompt B run 10 times</h2>
+<p>
+  To see whether 18 / 18 was luck, Prompt B was run 10 more times at temperature 0: 5 times with the same
+  seed (42) and 5 times with different seeds (1, 7, 123, 999, 2026). Everything else was the same.
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Run</th><th>Seed</th><th>Time</th><th>Heads</th><th>Grouping</th><th>Missing / duplicated</th><th>Wrong merges</th><th>Mode correct</th><th>Same output as run 2?</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td class="num">42</td><td class="num">78 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b meh">16 / 18</span></td><td><span class="b meh">No, 5 modes differ</span></td></tr>
+    <tr><td>2</td><td class="num">42</td><td class="num">69 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td>reference</td></tr>
+    <tr><td>3</td><td class="num">42</td><td class="num">71 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+    <tr><td>4</td><td class="num">42</td><td class="num">70 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+    <tr><td>5</td><td class="num">42</td><td class="num">71 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+    <tr><td>6</td><td class="num">1</td><td class="num">72 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+    <tr><td>7</td><td class="num">7</td><td class="num">71 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+    <tr><td>8</td><td class="num">123</td><td class="num">71 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+    <tr><td>9</td><td class="num">999</td><td class="num">71 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+    <tr><td>10</td><td class="num">2026</td><td class="num">70 s</td><td class="num">18</td><td><span class="b good">18 / 18</span></td><td><span class="b good">None</span></td><td><span class="b good">None</span></td><td><span class="b bad">13 / 18</span></td><td><span class="b good">Identical</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>What stayed the same and what changed</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Part of the output</th><th>Same in all 10 runs?</th><th>Details</th></tr></thead>
+  <tbody>
+    <tr><td>Which questions go together</td><td><span class="b good">Yes, 10 / 10</span></td><td>Every question in its own head, none missing, none duplicated</td></tr>
+    <tr><td>Head ids (names)</td><td><span class="b good">Yes, 10 / 10</span></td><td>Same 18 names every time, including the company-specific <code>datacor_affiliation</code></td></tr>
+    <tr><td>Descriptions</td><td><span class="b good">Yes, 10 / 10</span></td><td>Word for word the same</td></tr>
+    <tr><td>Mode (reuse / generate)</td><td><span class="b bad">No</span></td><td>5 questions flipped between runs (below)</td></tr>
+    <tr><td>Seed</td><td><span class="b info">No effect</span></td><td>At temperature 0 the seed changed nothing; runs 2–10 are byte-for-byte identical</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>The modes that flipped</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Question (short)</th><th>Head</th><th>Run 1</th><th>Runs 2–10</th><th>Should be</th></tr></thead>
+  <tbody>
+    <tr><td>10</td><td>Earliest start and latest end date</td><td class="m">start_date</td><td>reuse</td><td>generate</td><td><span class="b good">reuse</span> (run 1 right)</td></tr>
+    <tr><td>11</td><td>Location during internship</td><td class="m">location</td><td>reuse</td><td>generate</td><td><span class="b good">reuse</span> (run 1 right)</td></tr>
+    <tr><td>14</td><td>Expected graduation date</td><td class="m">graduation_date</td><td>reuse</td><td>generate</td><td><span class="b good">reuse</span> (run 1 right)</td></tr>
+    <tr><td>15</td><td>Who referred you</td><td class="m">referral</td><td>reuse</td><td>generate</td><td><span class="b good">reuse</span> (run 1 right)</td></tr>
+    <tr><td>16</td><td>If you selected other, more details</td><td class="m">other_details</td><td>reuse</td><td>generate</td><td><span class="b good">generate</span> (runs 2–10 right)</td></tr>
+  </tbody>
+</table>
+</div>
+<p>
+  Question 3 (privacy “I agree”) was marked <code>generate</code> in <strong>all</strong> 10 runs, which is wrong every time.
+  Only run 1 behaved differently. It was the first request after a pause; the most likely cause is that
+  Ollama processes a fresh prompt slightly differently from a cached one, which can tip close calls.
+  Close calls are exactly where the mode sits for Llama.
+</p>
+
+<h3>Verdict</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+  <tbody>
+    <tr><td>Is Prompt B consistent?</td><td><span class="b good">Yes for grouping and names.</span> 10 / 10 runs gave the same heads.</td></tr>
+    <tr><td>Does it score 18 / 18?</td><td><span class="b good">Yes on grouping, every time.</span> <span class="b bad">No on mode</span>: 13 / 18 usually, 16 / 18 once.</td></tr>
+    <tr><td>Can we trust Llama for the mode?</td><td><span class="b bad">No.</span> Set mode by rules in code and let the user change it in the GUI.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Problems found, in simple words</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Problem</th><th>Seen in</th><th>Example</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Lumps different answers together</strong></td><td>All Prompt A runs</td><td>University, degree and graduation date all in <code>education</code></td><td>Use Prompt B (“one head = one answer”)</td></tr>
+    <tr><td><strong>Output changes run to run</strong></td><td>Temperature 0.7</td><td>Between 7 and 21 heads for the same 18 questions</td><td>Always use temperature 0</td></tr>
+    <tr><td><strong>Splits one question into many heads</strong></td><td>Prompt B at 0.7</td><td>“Degree, major and minor” became 3 heads for 1 question</td><td>Temperature 0, plus a code check that each question id appears exactly once</td></tr>
+    <tr><td><strong>Drops a question</strong></td><td>Run 4</td><td>“Enrolled in Master's / PhD?” was in no head</td><td>Code check: any missing id is sent back to Llama, or flagged in the GUI</td></tr>
+    <tr><td><strong>Gets reuse / generate wrong</strong></td><td>Every run (2 to 11 mistakes)</td><td>Privacy “I agree” marked <code>generate</code></td><td>Simple rules first (<code>textarea</code> or “if you selected other” → generate), then the user checks in the GUI</td></tr>
+    <tr><td><strong>Uses company names in head ids</strong></td><td>Prompt B runs</td><td><code>datacor_affiliation</code></td><td>Add “never put a company name in a head id” to the prompt; the user can rename in the GUI</td></tr>
+    <tr><td><strong>Lazy descriptions</strong></td><td>Prompt B at 0.7</td><td>Description is just the question copied</td><td>Temperature 0 gave proper one-line descriptions</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Recommendations</h2>
+<ol>
+  <li><strong>Use Prompt B at temperature 0</strong> to create the starting heads. It was the only setting with zero wrong merges.</li>
+  <li><strong>Check Llama's output in code</strong> before saving: every question id exactly once, no unknown ids, no duplicate head ids. If the check fails, retry once, then send the result to the GUI as “needs review”.</li>
+  <li><strong>Don't let Llama choose the mode.</strong> The consistency check showed it flips. Set it in code: <code>textarea</code> → generate, “if you selected other…” → generate, everything else → reuse. The user can change it in the GUI.</li>
+  <li><strong>Add two lines to the prompt:</strong> “never use a company name in a head id” and “if a question asks for two things, name the head after both”.</li>
+  <li><strong>Keep the GUI review step</strong> (decision 3 in the plan). Even the best run needed 4 small fixes, and approve / edit catches them in seconds.</li>
+  <li><strong>One question per head is fine at the start.</strong> Heads fill up over time as Jev puts new wordings from other companies into them.</li>
+  <li><strong>Plan for growth.</strong> 18 questions took 78 s in one call. When the database has hundreds of questions, send them in batches of about 25, together with the heads made so far.</li>
+</ol>
+
+<p class="note">Raw outputs of all 9 runs and the two scripts were kept outside the repo in the session scratchpad. No stored answers were sent to the model or written into this report.</p>
+
+</main>
+</body>
+</html>

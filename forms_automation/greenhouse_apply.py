@@ -23,9 +23,14 @@ import difflib
 import json
 import re
 import sys
+import threading
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import cover_letter
+import email_otp
 import gui
 from playwright.sync_api import Locator, Page, sync_playwright
 from question_store import SKIP, QuestionStore, norm
@@ -368,6 +373,8 @@ class Filler:
 
     def upload_files(self) -> None:
         for field_id, key in (("resume", "resume"), ("cover_letter", "cover_letter")):
+            if field_id in self.done:  # e.g. cover letter handled by CoverLetterTask
+                continue
             path = self.profile.get(key)
             el = self.page.locator(f"input[type=file]#{field_id}")
             if not path or not el.count():
@@ -555,22 +562,221 @@ class Filler:
         print("  Check the form (and any captcha), then click Submit yourself.")
 
 
-def wait_for_review(n: int, total: int, url: str, filler: Filler, error: str | None) -> None:
+# --------------------------------------------------------------------------
+# Cover letter
+# --------------------------------------------------------------------------
+
+class CoverLetterTask:
+    """Writes a cover letter with the local LLM in a background thread while the
+    form is being filled, then lets the user review/edit it and uploads it as a PDF.
+    Every outcome is logged in cover_letters/cover_letters.json."""
+
+    def __init__(self, url: str, profile: dict, model: str, words: int, pdf_browser,
+                 interactive: bool, use_gui: bool):
+        self.url, self.profile, self.model, self.words = url, profile, model, words
+        self.pdf_browser = pdf_browser  # callable returning a headless browser for PDFs
+        self.interactive, self.use_gui = interactive, use_gui
+        self.job: dict | None = None
+        self.result: dict | None = None
+        self.error: str | None = None
+        self.regenerations = 0
+        self.thread = threading.Thread(target=self._write, daemon=True)
+        self.thread.start()
+
+    def _write(self) -> None:
+        try:
+            if self.job is None:
+                self.job = cover_letter.greenhouse_job(self.url)
+            self.result = cover_letter.write_letter(self.job, self.profile, model=self.model,
+                                                    words=self.words, echo=False)
+        except Exception as exc:  # shown to the user, never stops the form filling
+            self.error = str(exc)
+
+    def _review(self, letter: str, warnings: list[str]) -> tuple[str, str]:
+        if not self.interactive:
+            return gui.UPLOAD, letter
+        at = f" at {self.job['company']}" if self.job["company"] else ""
+        heading = f"Cover letter - {self.job['role']}{at}"
+        if self.use_gui:
+            return gui.review_letter(heading, letter, warnings)
+        print(f"\n  --- {heading} ---\n\n{letter}\n")
+        for warning in warnings:
+            print(f"  ! {warning}")
+        choice = input("\n  Cover letter: [u]pload, [r]egenerate or [s]kip? ").strip().lower()[:1]
+        return {"u": gui.UPLOAD, "r": gui.REGENERATE}.get(choice, gui.SKIP_LETTER), letter
+
+    def finish(self, page: Page) -> str:
+        """Wait for the letter, review it, upload it; returns a line for the job summary."""
+        while True:
+            if self.thread.is_alive():
+                print("  ~ waiting for the cover letter (local LLM, about a minute)...")
+                self.thread.join()
+            if self.error:
+                print(f"  ! cover letter not written: {self.error}")
+                return f"Cover letter not written: {self.error}"
+            letter, warnings = self.result["letter"], self.result["warnings"]
+            action, text = self._review(letter, warnings)
+            if action == gui.REGENERATE:
+                self.regenerations += 1
+                self.result = None
+                print("  ~ regenerating the cover letter...")
+                self.thread = threading.Thread(target=self._write, daemon=True)
+                self.thread.start()
+                continue
+            break
+
+        edited = text.strip() != letter.strip()
+        if edited:  # re-check the user's version so the log reflects what was sent
+            warnings = cover_letter.warnings_for(text, self.result["resume"], self.job, self.words)
+        txt, pdf = cover_letter.output_paths(self.job, self.profile)
+        txt.parent.mkdir(parents=True, exist_ok=True)
+        txt.write_text(text + "\n", "utf-8")
+        log = {"source": "greenhouse_apply.py", "txt": txt, "edited": edited,
+               "regenerations": self.regenerations}
+
+        if action == gui.SKIP_LETTER:
+            cover_letter.log_letter(self.job, self.model, text, warnings, "skipped", **log)
+            print("  - cover letter skipped (saved as text only)")
+            return "Cover letter skipped."
+
+        cover_letter.save_pdf(self.pdf_browser(), text, self.profile, pdf)
+        status = "uploaded" if self.interactive else "uploaded-unreviewed"
+        field = page.locator("input[type=file]#cover_letter")
+        try:
+            field.set_input_files(str(pdf))
+            page.get_by_text(pdf.name).first.wait_for(timeout=30_000)
+        except Exception:
+            status = "upload-failed"
+        cover_letter.log_letter(self.job, self.model, text, warnings, status, pdf=pdf, **log)
+        if status == "upload-failed":
+            print(f"  ! cover letter upload did not finish - attach {pdf} in the browser")
+            return f"Cover letter upload failed - attach it yourself: {pdf}"
+        print(f"  + {'Cover Letter':<70} -> {pdf.name}")
+        line = f"Cover letter uploaded: {pdf.name}"
+        if not self.interactive and warnings:
+            line += f" - NOT reviewed, {len(warnings)} warning(s): check cover_letters/cover_letters.json"
+        return line
+
+
+# --------------------------------------------------------------------------
+# Email security code (shown by Greenhouse after Submit)
+# --------------------------------------------------------------------------
+
+class SecurityCodeWatcher:
+    """Polled while you review the form. If Greenhouse asks for the 8-character
+    code it emails after Submit, fetch it from Gmail (background thread, read-only)
+    and type it into the boxes. You then click Submit again."""
+
+    BOXES = "input[id^='security-input-']"
+    MAX_RETRIES = 2
+
+    def __init__(self, page: Page, company: str | None):
+        self.page, self.company = page, company
+        self.thread: threading.Thread | None = None
+        self.result: tuple[str, datetime] | None = None
+        self.error: str | None = None
+        self.filled: tuple[str, datetime] | None = None  # (code, email time) last typed in
+        self.retries = 0
+        self.gave_up = False
+        self.status: str | None = None
+
+    def _fetch(self, since: datetime) -> None:
+        try:
+            self.result = email_otp.fetch_security_code(since, self.company)
+        except Exception as exc:
+            self.error = str(exc)
+
+    def _start(self, since: datetime) -> None:
+        self.result = self.error = None
+        self.thread = threading.Thread(target=self._fetch, args=(since,), daemon=True)
+        self.thread.start()
+
+    def poll(self) -> str | None:
+        if self.page.is_closed():
+            return self.status
+        boxes = self.page.locator(self.BOXES)
+        if not boxes.count() or not boxes.first.is_visible():
+            return self.status
+        typed = "".join(boxes.nth(i).input_value() for i in range(boxes.count()))
+        rejected = bool(self.filled) and self.page.locator(".email-verification--error").count() > 0
+
+        if self.thread is None and not self.gave_up:
+            if self.filled is None and not typed:
+                # Allow for the time between clicking Submit and the boxes appearing.
+                self._start(datetime.now().astimezone() - timedelta(minutes=10))
+                self.status = "Greenhouse asked for the emailed security code - checking Gmail..."
+                print(f"  ~ {self.status}")
+            elif rejected and typed in ("", self.filled[0]) and self.retries < self.MAX_RETRIES:
+                self.retries += 1
+                self._start(self.filled[1] + timedelta(seconds=1))  # only a newer email
+                self.status = "That code was rejected - waiting for a newer code email..."
+                print(f"  ~ {self.status}")
+        elif self.thread is not None and not self.thread.is_alive():
+            self.thread = None
+            if self.error:
+                self.gave_up = True
+                self.status = f"Couldn't get the security code ({self.error}) - type it from your email."
+                print(f"  ! {self.status}")
+            else:
+                code, sent = self.result
+                self._type(boxes, code)
+                self.filled = (code, sent)
+                self.status = "Security code from Gmail entered - click Submit application again."
+                print(f"  + {'Security code':<70} -> entered from Gmail ({sent:%H:%M})")
+        return self.status
+
+    def _type(self, boxes: Locator, code: str) -> None:
+        if boxes.count() == len(code):
+            for i, char in enumerate(code):
+                boxes.nth(i).fill(char)
+        else:  # different layout: type into the first box and let it advance
+            boxes.first.click()
+            self.page.keyboard.type(code, delay=60)
+
+
+def wait_in_terminal(prompt: str, watcher: SecurityCodeWatcher | None) -> None:
+    """input() that keeps polling the watcher (Windows) until Enter is pressed."""
+    try:
+        import msvcrt
+    except ImportError:
+        msvcrt = None
+    if watcher is None or msvcrt is None:
+        input(prompt)
+        return
+    print(prompt, end="", flush=True)
+    while True:
+        if msvcrt.kbhit() and msvcrt.getwch() in ("\r", "\n"):
+            print()
+            return
+        try:
+            watcher.poll()
+        except Exception as exc:
+            print(f"  ! security-code check failed: {exc}")
+        time.sleep(1.5)
+
+
+def wait_for_review(n: int, total: int, url: str, filler: Filler, error: str | None,
+                    notes: list[str] | None = None, watcher: SecurityCodeWatcher | None = None) -> None:
     """Pop-up shown after each job while you review and submit in Chrome."""
     last = n == total
     lines = [url, ""]
     if error:
         lines.append(f"Stopped early: {error}")
+    lines += notes or []
     if filler.blank_required:
         lines.append("Required fields still empty - fill these in the browser:")
         lines += [f"   \u2022 {label}" for label in filler.blank_required]
     elif not error:
         lines.append("All required fields I found are filled.")
     lines += ["", "Check the form (and any captcha), then click Submit in Chrome."]
+    if watcher:
+        lines.append("If Greenhouse then asks for the emailed security code, it's fetched from "
+                     "Gmail and typed in for you - then click Submit again.")
     if last:
         lines.append("Closing this window closes the browser - submit first!")
     button = "Close browser" if last else "Next job \u2192"
-    gui.notice(f"Job {n} of {total}", f"Job {n} of {total} filled - review and submit", lines, [button])
+    gui.notice(f"Job {n} of {total}", f"Job {n} of {total} filled - review and submit", lines, [button],
+               poll=watcher.poll if watcher else None)
 
 
 # --------------------------------------------------------------------------
@@ -589,6 +795,13 @@ def main() -> None:
                         help="don't prompt; just record unknown questions in answers.json")
     parser.add_argument("--terminal", action="store_true",
                         help="ask questions in the terminal instead of pop-up windows")
+    parser.add_argument("--no-cover-letter", action="store_true",
+                        help="don't write cover letters with the local LLM")
+    parser.add_argument("--cover-letter-model", default=cover_letter.DEFAULT_MODEL,
+                        help=f"Ollama model for cover letters (default {cover_letter.DEFAULT_MODEL})")
+    parser.add_argument("--cover-letter-words", type=int, default=cover_letter.DEFAULT_WORDS)
+    parser.add_argument("--no-otp", action="store_true",
+                        help="don't fetch Greenhouse's emailed security code from Gmail")
     args = parser.parse_args()
 
     urls = list(args.urls)
@@ -598,8 +811,10 @@ def main() -> None:
     if not urls:
         parser.error("give at least one job URL (or --file)")
 
-    answers = Answers(json.loads(args.profile.read_text("utf-8")), QuestionStore(),
-                      interactive=not args.no_ask, use_gui=not args.terminal)
+    profile = json.loads(args.profile.read_text("utf-8"))
+    answers = Answers(profile, QuestionStore(), interactive=not args.no_ask, use_gui=not args.terminal)
+    # A fixed cover_letter file in profile.json wins; otherwise write one per job.
+    write_letters = not args.no_cover_letter and not profile.get("cover_letter")
 
     with sync_playwright() as p:
         options = {"headless": False, "no_viewport": True, "args": ["--start-maximized"]}
@@ -608,23 +823,53 @@ def main() -> None:
         except Exception:  # Chrome not installed - use Playwright's Chromium
             context = p.chromium.launch_persistent_context(BROWSER_PROFILE, **options)
 
+        headless: list = []  # created on first use - renders cover-letter PDFs
+
+        def pdf_browser():
+            if not headless:
+                try:
+                    headless.append(p.chromium.launch(channel="chrome"))
+                except Exception:
+                    headless.append(p.chromium.launch())
+            return headless[0]
+
         for n, url in enumerate(urls, 1):
             print(f"\n[{n}/{len(urls)}] {url}")
             page = context.new_page()
             filler = Filler(page, answers)
             error = None
+            notes: list[str] = []
+            task = None
             try:
                 open_job(page, url)
+                if write_letters and page.locator("input[type=file]#cover_letter").count():
+                    filler.done.add("cover_letter")
+                    task = CoverLetterTask(page.url, profile, args.cover_letter_model,
+                                           args.cover_letter_words, pdf_browser,
+                                           interactive=not args.no_ask, use_gui=not args.terminal)
                 filler.run()
             except Exception as exc:  # keep going with the next job
                 error = str(exc).splitlines()[0]
                 print(f"  ! stopped early: {error}")
+            if task:
+                try:
+                    notes.append(task.finish(page))
+                except Exception as exc:
+                    notes.append(f"Cover letter failed: {str(exc).splitlines()[0]}")
+                    print(f"  ! {notes[-1]}")
+            watcher = None
+            if not args.no_otp and not page.is_closed():
+                company = task.job["company"] if task and task.job else gui.company_of(page.url)
+                watcher = SecurityCodeWatcher(page, company)
             if args.terminal:
                 last = n == len(urls)
-                input("\n  Press Enter " + ("to close the browser (submit first!)..." if last
-                                             else "for the next job (this tab stays open)..."))
+                wait_in_terminal("\n  Press Enter " + ("to close the browser (submit first!)..." if last
+                                                        else "for the next job (this tab stays open)..."),
+                                 watcher)
             else:
-                wait_for_review(n, len(urls), url, filler, error)
+                wait_for_review(n, len(urls), url, filler, error, notes, watcher)
+        for browser in headless:
+            browser.close()
         context.close()
 
 

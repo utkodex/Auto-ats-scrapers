@@ -5,6 +5,11 @@ options and the job it came from. Its "answer" stays null until you give one
 (in the terminal during a run, with questions.py, or by editing the file),
 and is reused on every form that asks the same question.
 
+"head" names the classification head (heads.json) the question belongs to, so
+a reworded question can reuse the answer of its head. Questions in a
+"generate" head keep "answer" null and list every LLM-written answer in
+"generated": [{"job", "answer", "at", "model"}].
+
     {
       "questions": [
         {
@@ -17,7 +22,9 @@ and is reused on every form that asks the same question.
           "times_seen": 2,
           "first_seen": "2026-10-09T12:00:00",
           "last_seen": "2026-10-09T12:30:00",
-          "last_job": "https://job-boards.greenhouse.io/reddit/jobs/8250389"
+          "last_job": "https://job-boards.greenhouse.io/reddit/jobs/8250389",
+          "head": "veteran_status",
+          "head_source": "llama"
         }
       ]
     }
@@ -86,7 +93,7 @@ class QuestionStore:
                 "id": max((q["id"] for q in self.questions), default=0) + 1,
                 "question": label, "answer": None, "type": None, "options": None,
                 "required": False, "times_seen": 0, "first_seen": now(),
-                "last_seen": now(), "last_job": None,
+                "last_seen": now(), "last_job": None, "head": None,
             }
             self.questions.append(entry)
         entry["question"] = label
@@ -111,6 +118,33 @@ class QuestionStore:
             entry = self.get(label)
             entry["times_seen"] = 0
         entry["answer"] = answer
+        self.save()
+
+    def set_head(self, label: str, head: str | None, source: str | None) -> None:
+        entry = self.get(label)
+        if entry is None:
+            raise KeyError(label)
+        entry["head"] = head
+        entry["head_source"] = source if head else None
+        self.save()
+
+    def in_head(self, head: str) -> list[dict]:
+        return [q for q in self.questions if q.get("head") == head]
+
+    def add_generated(self, label: str, job: str | None, answer: str, model: str) -> None:
+        """Keep an LLM-written answer; "answer" stays null so it's never copied as-is."""
+        entry = self.get(label)
+        if entry is None:
+            raise KeyError(label)
+        entry.setdefault("generated", []).append(
+            {"job": job, "answer": answer, "at": now(), "model": model})
+        self.save()
+
+    def rename_head(self, old: str, new: str | None) -> None:
+        for q in self.in_head(old):
+            q["head"] = new
+            if new is None:
+                q["head_source"] = None
         self.save()
 
     def delete(self, qid: int) -> None:

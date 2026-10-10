@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Question Classification Plan</title>
+<style>
+  :root {
+    --bg: #fafaf8; --surface: #ffffff; --text: #1d1d1b; --muted: #5f5f5a;
+    --border: #e2e1dc; --accent: #2f5bd3; --accent-soft: #e8eefc;
+    --llama: #8a4b0f; --llama-soft: #fbefe2; --jev: #136b4a; --jev-soft: #e3f4ec;
+    --warn: #8f1d1d; --warn-soft: #fbe9e9; --code: #f2f1ed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514; --surface: #1d1d1b; --text: #ecebe6; --muted: #a3a29b;
+      --border: #34332f; --accent: #8aa8ff; --accent-soft: #1f2a46;
+      --llama: #f0b376; --llama-soft: #3a2a19; --jev: #7fd8b1; --jev-soft: #173328;
+      --warn: #f2a3a3; --warn-soft: #3c1f1f; --code: #262624;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --surface: #1d1d1b; --text: #ecebe6; --muted: #a3a29b;
+    --border: #34332f; --accent: #8aa8ff; --accent-soft: #1f2a46;
+    --llama: #f0b376; --llama-soft: #3a2a19; --jev: #7fd8b1; --jev-soft: #173328;
+    --warn: #f2a3a3; --warn-soft: #3c1f1f; --code: #262624;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 48px 16px 80px; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 1.3rem; margin: 48px 0 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 1.05rem; margin: 24px 0 8px; }
+  p, li { color: var(--text); }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .lede { font-size: 1.1rem; background: var(--accent-soft); border-left: 4px solid var(--accent);
+          padding: 16px 20px; border-radius: 6px; }
+  code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: .9em; }
+  pre { background: var(--code); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: .85rem; line-height: 1.5; }
+  .roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .card h3 { margin-top: 0; }
+  .card.llama { border-top: 4px solid var(--llama); }
+  .card.jev { border-top: 4px solid var(--jev); }
+  .tag { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+  .tag.llama { background: var(--llama-soft); color: var(--llama); }
+  .tag.jev { background: var(--jev-soft); color: var(--jev); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .example { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: var(--surface);
+             border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
+  .example .qs { flex: 1 1 260px; }
+  .example .qs div { font-style: italic; }
+  .example .arrow { font-size: 1.4rem; color: var(--muted); }
+  .example .head { font-weight: 700; font-size: 1.1rem; color: var(--jev); }
+  .flow svg { width: 100%; height: auto; display: block; }
+  .flow { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; background: var(--surface); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+  td.h { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; white-space: nowrap; }
+  ol.steps li { margin-bottom: 10px; }
+  .note { color: var(--muted); font-size: .9rem; }
+  .tag.ok { background: var(--accent-soft); color: var(--accent); }
+  a { color: var(--accent); }
+  tbody th { white-space: nowrap; }
+  .decision { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+              border-radius: 8px; padding: 14px 18px; margin: 16px 0; }
+  .decision h3 { margin: 0 0 6px; }
+  .decision .said { color: var(--muted); font-style: italic; margin: 0 0 8px; }
+  .decision p:last-child, .decision ul:last-child, .decision pre:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Question Classification Plan</h1>
+<p class="sub">Auto-ats-scrapers · forms_automation · drafted 2026-10-10</p>
+
+<p class="lede">
+  <strong>Intention:</strong> group every application question stored from Greenhouse forms into
+  <em>classification heads</em> (topics such as <em>Gender</em> or <em>Veteran status</em>).
+  When a form asks a question we have never seen word-for-word, we find which head it belongs
+  to and reuse the answer given for that head last time, so the same thing is never asked twice
+  just because a company phrased it differently.
+</p>
+
+<h2>The idea in one example</h2>
+<div class="example">
+  <div class="qs">
+    <div>“What is your sex?”</div>
+    <div>“What is your gender?”</div>
+    <div>“Please select the gender you identify with.”</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="head">gender</div>
+</div>
+<p>Different wording, one meaning, one head, one stored answer.</p>
+
+<h2>Who does what</h2>
+<div class="roles">
+  <div class="card llama">
+    <span class="tag llama">Head creator</span>
+    <h3>Llama 3.1 8B (local, Ollama)</h3>
+    <ul>
+      <li>Reads the question database and proposes the initial set of heads.</li>
+      <li>Gives each head a short id, a plain-English description and a few example questions.</li>
+      <li>Does <strong>not</strong> decide reuse / generate. Testing showed that is unreliable, so code rules set it.</li>
+      <li>Is called again later, only when Jev says a question fits no existing head, and creates a new head for it.</li>
+    </ul>
+    <p class="note">Already in the project: <code>cover_letter.py</code> uses <code>llama3.1:8b</code> through Ollama.</p>
+  </div>
+  <div class="card jev">
+    <span class="tag jev">Classifier</span>
+    <h3>Jev (type-safe AI)</h3>
+    <ul>
+      <li>Takes one question (text, type, options) and the current list of heads.</li>
+      <li>Returns a typed result: exactly one head id from the list, or <code>NO_MATCHING_HEAD</code>.</li>
+      <li>Because the output is typed, it can never invent a head name or return free text.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Flow for a question on a form</h2>
+<div class="flow" role="img" aria-label="Flowchart: new question goes to exact match lookup, then Jev, then either reuse answer or Llama creates a new head">
+<svg viewBox="0 0 820 400" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+    </marker>
+  </defs>
+  <g stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M150 50 H220"/>
+    <path d="M370 50 H440"/>
+    <path d="M295 75 V140"/>
+    <path d="M370 165 H440"/>
+    <path d="M295 190 V255"/>
+    <path d="M370 280 H440"/>
+    <path d="M590 280 H620 V190 H590" />
+    <path d="M590 165 H640"/>
+  </g>
+  <g fill="var(--muted)" font-size="12">
+    <text x="378" y="42">seen before</text>
+    <text x="303" y="112">new wording</text>
+    <text x="378" y="157">head found</text>
+    <text x="303" y="227">NO_MATCHING_HEAD</text>
+    <text x="628" y="240">new head</text>
+  </g>
+  <g>
+    <rect x="10" y="25" width="140" height="50" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+    <text x="80" y="55" text-anchor="middle" fill="var(--text)">Question on form</text>
+
+    <rect x="220" y="25" width="150" height="50" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+    <text x="295" y="47" text-anchor="middle" fill="var(--text)">Exact match in</text>
+    <text x="295" y="63" text-anchor="middle" fill="var(--text)">answers.json?</text>
+
+    <rect x="440" y="25" width="150" height="50" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="515" y="55" text-anchor="middle" fill="var(--text)">Use stored answer</text>
+
+    <rect x="220" y="140" width="150" height="50" rx="8" fill="var(--jev-soft)" stroke="var(--jev)"/>
+    <text x="295" y="162" text-anchor="middle" fill="var(--text)" font-weight="600">Jev classifies</text>
+    <text x="295" y="178" text-anchor="middle" fill="var(--text)">into a head</text>
+
+    <rect x="440" y="140" width="150" height="50" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+    <text x="515" y="162" text-anchor="middle" fill="var(--text)">Look up the head's</text>
+    <text x="515" y="178" text-anchor="middle" fill="var(--text)">previous answer</text>
+
+    <rect x="640" y="140" width="170" height="50" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="725" y="162" text-anchor="middle" fill="var(--text)">Fit answer to this</text>
+    <text x="725" y="178" text-anchor="middle" fill="var(--text)">form's options, fill</text>
+
+    <rect x="220" y="255" width="150" height="50" rx="8" fill="var(--llama-soft)" stroke="var(--llama)"/>
+    <text x="295" y="277" text-anchor="middle" fill="var(--text)">Totally new topic</text>
+    <text x="295" y="293" text-anchor="middle" fill="var(--text)">(fits no head)</text>
+
+    <rect x="440" y="255" width="150" height="50" rx="8" fill="var(--llama-soft)" stroke="var(--llama)"/>
+    <text x="515" y="277" text-anchor="middle" fill="var(--text)" font-weight="600">Llama 8B creates</text>
+    <text x="515" y="293" text-anchor="middle" fill="var(--text)">a new head</text>
+
+    <text x="440" y="345" fill="var(--muted)" font-size="12">A brand-new head has no previous answer,</text>
+    <text x="440" y="362" fill="var(--muted)" font-size="12">so the user answers it once; every later</text>
+    <text x="440" y="379" fill="var(--muted)" font-size="12">question in that head reuses it.</text>
+  </g>
+</svg>
+</div>
+
+<p class="note">The chart shows the main reuse path. The confidence check, the generate-mode heads and the GUI review of new heads are covered in the steps below and under Decisions.</p>
+
+<h3>Step by step</h3>
+<ol class="steps">
+  <li><strong>Exact match first.</strong> The existing <code>QuestionStore.get()</code> lookup stays. No AI is called when the wording is already known.</li>
+  <li><strong>Jev classifies.</strong> For new wording, Jev picks one head from the list, or the escape option <code>NO_MATCHING_HEAD</code>, along with a confidence score.</li>
+  <li><strong>Check confidence.</strong> If the confidence is below the threshold, the user is asked to confirm Jev's pick (or choose another head) before anything is filled.</li>
+  <li><strong>Check the head's mode.</strong>
+    <ul>
+      <li><code>reuse</code>: take the answer last given for that head and fit it to this form's options with Jev (for example “Male” on one form, “Man” on another).</li>
+      <li><code>generate</code>: essay and “if other, explain” style questions. They are handled like the cover letter: the LLM writes a fresh answer for this job.</li>
+    </ul>
+  </li>
+  <li><strong>No head fits.</strong> The question goes to Llama 8B, which drafts a new head (id, description, examples); the mode comes from the rules. The draft appears in the GUI, where the user approves it, edits it, or rejects it. Jev only uses it after approval.</li>
+  <li><strong>Record it.</strong> The question is saved in <code>answers.json</code> with its <code>head</code> and the answer that was used, including generated answers, so there is a full history.</li>
+</ol>
+
+<h2>Jev's typed output</h2>
+<p>The key rule is that Jev can only answer with a head that exists, or say none fits. A sketch of the contract:</p>
+<pre>
+class Classification:
+    head: Literal["gender", "sexual_orientation", "ethnicity", ..., "NO_MATCHING_HEAD"]
+    confidence: float          # 0.0 – 1.0
+    reason: str                # one line, for review in the GUI
+</pre>
+<p>The allowed values are rebuilt from the head list every time a new head is created, so the type always matches the current heads.</p>
+
+<h2>Head creation: tested with Llama 3.1 8B</h2>
+<p>
+  Llama 3.1 8B was run 19 times on the 18 questions in <code>forms_automation/answers.json</code> to check that it can
+  create the heads. The full analysis is in <a href="llama-heads-report.html">llama-heads-report.html</a>; this
+  section keeps what is needed for the specs. Only question text and type were sent to the model. Stored answers
+  were not sent and are not shown here.
+</p>
+
+<h3>Result in one table</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>What Llama produces</th><th>Reliable?</th><th>Evidence</th><th>Spec decision</th></tr></thead>
+  <tbody>
+    <tr><td>Grouping (which questions share a head)</td><td><span class="tag ok">Yes</span></td><td>Prompt B, temperature 0: 18 / 18 in 10 / 10 runs, no missing or duplicated ids</td><td>Llama decides the grouping</td></tr>
+    <tr><td>Head ids</td><td><span class="tag ok">Yes, needs review</span></td><td>Identical in 10 / 10 runs; 2 of 18 need a rename (company name in the id, or the id covers only half the question)</td><td>Llama proposes, user can rename in the GUI</td></tr>
+    <tr><td>Descriptions</td><td><span class="tag ok">Yes</span></td><td>Identical in 10 / 10 runs, one plain sentence each</td><td>Llama writes them</td></tr>
+    <tr><td>Mode (reuse / generate)</td><td><span class="tag warn">No</span></td><td>Flips between runs: 13 / 18 in 9 runs, 16 / 18 in 1; the consent question was wrong in all 10</td><td><strong>Not decided by Llama.</strong> Set by rules in code, editable in the GUI</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Settings that worked</h3>
+<div class="table-wrap">
+<table>
+  <tbody>
+    <tr><th>Model</th><td><code>llama3.1:8b</code> (Q4_K_M) through Ollama at <code>http://localhost:11434/api/chat</code>, the same model as <code>cover_letter.py</code></td></tr>
+    <tr><th>Temperature</th><td><code>0</code>. At 0.7 the output changed every run (7 to 21 heads, dropped or split questions)</td></tr>
+    <tr><th>Seed</th><td>No effect at temperature 0</td></tr>
+    <tr><th>Context</th><td><code>num_ctx: 8192</code></td></tr>
+    <tr><th>Output</th><td>Ollama structured output: a JSON schema passed in <code>format</code>, so the response always parses</td></tr>
+    <tr><th>Input per question</th><td><code>{"id", "question", "type"}</code> only, never the answer</td></tr>
+    <tr><th>Time</th><td>About 70–80 s for all 18 questions in one call on this PC</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Prompt A vs Prompt B</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Prompt</th><th>Behaviour</th><th>Correct grouping</th></tr></thead>
+  <tbody>
+    <tr><td>A: “group questions with the same meaning”</td><td>Groups by broad topic: <code>identity</code> = transgender + orientation + ethnicity; <code>education</code> = 6 different questions</td><td>7 / 18</td></tr>
+    <tr><td>B: A + “a head stores ONE answer”</td><td>One head per distinct answer</td><td>18 / 18 (10 / 10 runs)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Prompt B (the tested system prompt)</h3>
+<pre>
+You organise job-application form questions into classification heads.
+A head is a topic: questions with different wording but the same meaning share a head
+(e.g. "What is your sex?" and "What is your gender?" -&gt; head "gender").
+Rules:
+- Every question id must be in exactly one head.
+- MOST IMPORTANT: a head stores ONE answer. Two questions may share a head ONLY if the
+  same person would give the same answer to both. Gender, sexual orientation, ethnicity
+  and transgender status have different answers, so they are separate heads.
+  University, degree, graduation date, start date and location are separate heads.
+  When unsure, make a separate head. One question per head is fine.
+- Head ids are short snake_case.
+- description: one plain sentence saying what the head is about.
+- mode: "reuse" if the same answer can be copied to any company's form,
+  "generate" if the answer must be written fresh per job (essays, motivation, "if other, explain" follow-ups).
+Return JSON only.
+</pre>
+<p>The user message is the JSON list of <code>{id, question, type}</code>. Schema passed as <code>format</code>:</p>
+<pre>
+{"type": "object", "required": ["heads"],
+ "properties": {"heads": {"type": "array", "items": {
+   "type": "object", "required": ["id", "description", "mode", "question_ids"],
+   "properties": {
+     "id":           {"type": "string"},
+     "description":  {"type": "string"},
+     "mode":         {"type": "string", "enum": ["reuse", "generate"]},
+     "question_ids": {"type": "array", "items": {"type": "integer"}}}}}}}
+</pre>
+<p><strong>Changes recommended for implementation</strong> <span class="tag warn">not yet tested</span></p>
+<ul>
+  <li>Remove the <code>mode</code> rule and the <code>mode</code> field, since mode is set by rules (below).</li>
+  <li>Add: “Never put a company name in a head id.”</li>
+  <li>Add: “If a question asks for two things, name the head after both (e.g. <code>availability_dates</code>).”</li>
+  <li>Add an <code>examples</code> field (list of question texts) so <code>heads.json</code> gets examples directly.</li>
+</ul>
+
+<h3>Mode rules (set in code, not by Llama)</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Rule</th><th>Mode</th></tr></thead>
+  <tbody>
+    <tr><td>Question <code>type</code> is <code>textarea</code></td><td>generate</td></tr>
+    <tr><td>Question starts with “If you selected other…” or asks to explain a previous choice</td><td>generate</td></tr>
+    <tr><td>Everything else (consent boxes, yes/no, dates, names, demographics)</td><td>reuse</td></tr>
+    <tr><td>The user changes it in the GUI</td><td>whatever the user sets (always wins)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Validation checks on Llama's output</h3>
+<p>Run in code before anything is saved. Each one maps to a failure seen in testing.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Check</th><th>Failure it catches</th><th>On failure</th></tr></thead>
+  <tbody>
+    <tr><td>Every input question id appears exactly once</td><td>Dropped question; one question split into several heads</td><td>Retry once, then mark the batch “needs review” in the GUI</td></tr>
+    <tr><td>No unknown question ids</td><td>Made-up ids</td><td>Same</td></tr>
+    <tr><td>Head ids are unique snake_case</td><td>Duplicate or badly formed ids</td><td>Same</td></tr>
+    <tr><td>Head id contains no company name from the question text</td><td><code>datacor_affiliation</code></td><td>Flag for rename in the GUI</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Tested heads for the current database</h3>
+<p>Output of Prompt B at temperature 0 (the same in 10 / 10 runs), with the mode from the rules and the fixes the user would make in review.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>#</th><th>Question (short)</th><th>Head from Llama</th><th>Mode (rules)</th><th>Review action</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Willing to travel up to 20%?</td><td class="h">travel</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>2</td><td>Security clearance level</td><td class="h">security_clearance</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>3</td><td>“I agree” to the privacy policy</td><td class="h">agreement</td><td>reuse</td><td>Approve (Llama said generate in all runs; the rule fixes it)</td></tr>
+    <tr><td>4</td><td>Person of transgender experience?</td><td class="h">transgender_status</td><td>reuse</td><td>Approve. “What is your sex / gender?” will create a separate <code>gender</code> head when first seen</td></tr>
+    <tr><td>5</td><td>Sexual orientation</td><td class="h">sexual_orientation</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>6</td><td>Up to 2 ethnicities</td><td class="h">ethnicity</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>7</td><td>Current / most recent company</td><td class="h">current_company</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>8</td><td>Worked for Datacor before?</td><td class="h">datacor_affiliation</td><td>reuse</td><td><span class="tag warn">Rename</span> to <code>worked_here_before</code></td></tr>
+    <tr><td>9</td><td>Enrolled in a Master's / PhD?</td><td class="h">education_status</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>10</td><td>Earliest start and latest end date</td><td class="h">start_date</td><td>reuse</td><td><span class="tag warn">Rename</span> to <code>availability_dates</code></td></tr>
+    <tr><td>11</td><td>Location during internship</td><td class="h">location</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>12</td><td>University</td><td class="h">university</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>13</td><td>Degree, major(s), minor(s)</td><td class="h">degree</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>14</td><td>Expected graduation date</td><td class="h">graduation_date</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>15</td><td>Who referred you</td><td class="h">referral</td><td>reuse</td><td>Approve</td></tr>
+    <tr><td>16</td><td>If you selected other, more details</td><td class="h">other_details</td><td>generate</td><td>Approve</td></tr>
+    <tr><td>17</td><td>What you want to gain from an internship</td><td class="h">motivation</td><td>generate</td><td>Approve (cover-letter style)</td></tr>
+    <tr><td>18</td><td>Veteran / served in the military?</td><td class="h">veteran_status</td><td>reuse</td><td>Approve</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Scaling</h3>
+<ul>
+  <li>The initial run sends all questions in one call. Beyond about 25 questions, send them in batches of about 25, together with the heads created so far, so Llama adds to existing heads instead of starting over.</li>
+  <li>Later, a single new question only reaches Llama when Jev returns <code>NO_MATCHING_HEAD</code>. The same prompt is used, with the current heads included.</li>
+</ul>
+
+<h2>Decisions</h2>
+<p>Each open question from the first draft, with what was decided.</p>
+
+<div class="decision">
+  <h3>1. Essay and “if other” questions are generated, like the cover letter <span class="tag ok">decided</span></h3>
+  <p class="said">“This kind of question we will treat as cover letter only. The LLM will generate that and record all the answers with the question.”</p>
+  <ul>
+    <li>Jev still classifies these questions, but their head has <code>mode: "generate"</code> instead of <code>"reuse"</code>. The mode is set by code rules (see “Mode rules” above), not by Llama, and can be changed in the GUI.</li>
+    <li>For a generate head, the stored answer is never copied. The LLM writes a new answer for each job, the same way <code>cover_letter.py</code> does (Llama 3.1 8B through Ollama), using the job post and, for “if other”, the question before it.</li>
+    <li>Every generated answer is saved with its question and job in <code>answers.json</code>. Earlier answers can be shown to the LLM as style examples, but are not reused as-is.</li>
+  </ul>
+</div>
+
+<div class="decision">
+  <h3>2. Ask when confidence is low <span class="tag ok">decided</span></h3>
+  <p class="said">“Yes, need that. If the confidence is not good, ask.”</p>
+  <ul>
+    <li>Jev returns a <code>confidence</code> with every pick. Below the threshold (start at <code>0.75</code>, tunable), nothing is filled silently.</li>
+    <li>The user sees the question, Jev's pick and its one-line reason, and can accept it, choose a different head, or send it to Llama as a new head.</li>
+    <li>The user's choice is saved, so the same wording is an exact match next time and is never asked again.</li>
+  </ul>
+</div>
+
+<div class="decision">
+  <h3>3. New heads are reviewed and editable in the GUI <span class="tag ok">decided</span></h3>
+  <p class="said">“Yes, and also give me the option to edit.”</p>
+  <ul>
+    <li>A head that Llama creates starts as <code>status: "pending"</code> and appears in the GUI.</li>
+    <li>The user can <strong>approve</strong> it, <strong>edit</strong> it (id, description, examples, mode, auto-fill), <strong>merge</strong> it into an existing head, or <strong>reject</strong> it.</li>
+    <li>Only <code>approved</code> heads are included in Jev's allowed values. Approved heads stay editable later from the same screen.</li>
+  </ul>
+</div>
+
+<div class="decision">
+  <h3>4. Jev fits stored answers to the form's options <span class="tag ok">decided</span></h3>
+  <p class="said">“Yes, do this.”</p>
+  <p>When the stored answer for a head isn't exactly one of this form's options, Jev is called a second time. This time the allowed values are the form's own options:</p>
+<pre>
+class OptionFit:
+    option: Literal[*form_options, "NO_GOOD_OPTION"]
+    confidence: float
+</pre>
+  <p>For example, a stored “Male” fits “Man” on another form. <code>NO_GOOD_OPTION</code> or a low confidence goes to the user, using the same rule as decision 2.</p>
+</div>
+
+<div class="decision">
+  <h3>5. Storage: a head on each question, plus heads.json <span class="tag ok">decided</span></h3>
+  <p class="said">“Yes.”</p>
+  <p>Each question in <code>answers.json</code> gets a <code>head</code> field. All other fields stay as they are.</p>
+<pre>
+{ "id": 18, "question": "...", "answer": "...", "type": "...",
+  "head": "veteran_status", ... }
+</pre>
+  <p>A new <code>forms_automation/heads.json</code> holds the heads:</p>
+<pre>
+{ "heads": [
+  { "id": "veteran_status",
+    "description": "Whether the candidate has served in the military",
+    "examples": ["Are you a veteran?", "Have you served in the armed forces?"],
+    "mode": "reuse",          // "reuse" | "generate", set by rules, editable
+    "auto_fill": true,        // false = always ask, even when confident
+    "status": "approved",     // "pending" | "approved" | "rejected"
+    "created_by": "llama"     // "llama" | "user"
+  }
+] }
+</pre>
+</div>
+
+</main>
+</body>
+</html>
