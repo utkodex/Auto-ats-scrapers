@@ -1,0 +1,20 @@
+[
+ {"question": "What is your gender?", "type": "select", "options": ["Male", "Female", "Non-binary", "Decline"], "wrong_head": "transgender_status", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "What is your sex?", "type": "select", "options": ["Male", "Female"], "wrong_head": "transgender_status", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Expected graduation date", "type": "text", "wrong_head": "availability_dates", "expected_head": "graduation_date"},
+ {"question": "Current company", "type": "text", "wrong_head": "worked_here_before", "expected_head": "current_company"},
+ {"question": "Have you worked at a startup before?", "type": "select", "options": ["Yes", "No"], "wrong_head": "worked_here_before", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Do you agree to a background check?", "type": "select", "options": ["Yes", "No"], "wrong_head": "agreement", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Are you willing to relocate for this role?", "type": "select", "options": ["Yes", "No"], "wrong_head": "location", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Are you willing to work overtime when needed?", "type": "select", "options": ["Yes", "No"], "wrong_head": "travel", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Do you have a disability or chronic condition?", "type": "select", "options": ["Yes", "No"], "wrong_head": "veteran_status", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Are you the spouse of an active-duty service member?", "type": "select", "options": ["Yes", "No"], "wrong_head": "veteran_status", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Where did you complete your undergraduate degree?", "type": "text", "wrong_head": "university", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "What is your highest completed degree?", "type": "select", "options": ["High school", "Bachelor's", "Master's", "PhD"], "wrong_head": "degree", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "What is your country of citizenship?", "type": "text", "wrong_head": "ethnicity", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Who should we contact in an emergency?", "type": "text", "wrong_head": "referral", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Please list a professional reference we can contact.", "type": "text", "wrong_head": "referral", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "What dates are you available for an interview?", "type": "text", "wrong_head": "availability_dates", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "What is your date of birth?", "type": "text", "wrong_head": "graduation_date", "expected_head": "NO_MATCHING_HEAD"},
+ {"question": "Are you currently enrolled in a Bachelor's program?", "type": "select", "options": ["Yes", "No"], "wrong_head": "education_status", "expected_head": "NO_MATCHING_HEAD"}
+]

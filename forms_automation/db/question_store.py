@@ -38,8 +38,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-STORE_FILE = HERE / "answers.json"
+from forms_automation.common.paths import ANSWERS_FILE
+
+STORE_FILE = ANSWERS_FILE
 
 # Answer meaning "never fill this question".
 SKIP = "__skip__"
@@ -47,6 +48,15 @@ SKIP = "__skip__"
 
 def norm(text: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).strip()
+
+
+NEGATIONS = {"no", "not", "none", "never", "don", "dont", "non", "nor", "without",
+             "decline", "unable", "cannot", "cant"}
+
+
+def negated(text: str) -> bool:
+    """True for "I am not a veteran" - used so a match never flips an answer's meaning."""
+    return bool(NEGATIONS & set(norm(text).split()))
 
 
 def now() -> str:

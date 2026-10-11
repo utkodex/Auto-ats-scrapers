@@ -137,7 +137,6 @@ credentials.json
 imagerror
 
 # forms_automation personal data
-forms_automation/profile.json
-forms_automation/answers.json*
+forms_automation/data/
 forms_automation/.chrome-profile/
-forms_automation/cover_letters/
+forms_automation/ai/evals/results/

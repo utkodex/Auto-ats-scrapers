@@ -2,16 +2,16 @@
 
 Reads your resume (the PDF in profile.json) and the job description (fetched
 from a Greenhouse job link, or a text file), asks the model for a letter, and
-saves it to forms_automation/cover_letters/ as .txt and .pdf. Every letter is
+saves it to forms_automation/data/cover_letters/ as .txt and .pdf. Every letter is
 also logged in cover_letters/cover_letters.json. Everything runs on this PC.
 
-greenhouse_apply.py uses the same functions to write, review and upload a
+greenhouse/apply.py uses the same functions to write, review and upload a
 letter for each job that has a Cover Letter field.
 
 Usage:
-    python forms_automation/cover_letter.py https://job-boards.greenhouse.io/striveworks/jobs/8012592003
-    python forms_automation/cover_letter.py --jd-file job.txt --company "Acme" --role "ML Engineer"
-    python forms_automation/cover_letter.py URL --notes "mention I can start in 30 days" --words 250
+    python forms_automation/ai/cover_letter.py https://job-boards.greenhouse.io/striveworks/jobs/8012592003
+    python forms_automation/ai/cover_letter.py --jd-file job.txt --company "Acme" --role "ML Engineer"
+    python forms_automation/ai/cover_letter.py URL --notes "mention I can start in 30 days" --words 250
 
 Needs Ollama running with the model pulled:  ollama pull llama3.1:8b
 """
@@ -33,9 +33,12 @@ import html2text
 import httpx
 from pypdf import PdfReader
 
-HERE = Path(__file__).resolve().parent
-REPO = HERE.parent
-OUT_DIR = HERE / "cover_letters"
+if __package__ in (None, ""):  # run as a file: make the forms_automation package importable
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from forms_automation.common.paths import COVER_LETTERS, DATA, PROFILE_FILE, REPO
+
+OUT_DIR = COVER_LETTERS
 LOG_FILE = OUT_DIR / "cover_letters.json"
 OLLAMA = "http://localhost:11434"
 DEFAULT_MODEL = "llama3.1:8b"
@@ -384,8 +387,8 @@ def log_letter(job: dict, model: str, letter: str, warnings: list[str], status: 
         "edited": edited,
         "regenerations": regenerations,
         "warnings": warnings,
-        "txt": str(txt.relative_to(HERE)) if txt else None,
-        "pdf": str(pdf.relative_to(HERE)) if pdf else None,
+        "txt": str(txt.relative_to(DATA)) if txt else None,
+        "pdf": str(pdf.relative_to(DATA)) if pdf else None,
         "letter": letter,
     })
     _save_log(letters)
@@ -409,7 +412,7 @@ def main() -> None:
     parser.add_argument("--words", type=int, default=DEFAULT_WORDS, help=f"target length (default {DEFAULT_WORDS})")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--temperature", type=float, default=0.6)
-    parser.add_argument("--profile", type=Path, default=HERE / "profile.json")
+    parser.add_argument("--profile", type=Path, default=PROFILE_FILE)
     parser.add_argument("--no-pdf", action="store_true", help="only write the .txt")
     args = parser.parse_args()
 

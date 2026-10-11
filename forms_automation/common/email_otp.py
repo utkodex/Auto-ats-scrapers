@@ -22,7 +22,8 @@ from email.header import decode_header, make_header
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+from forms_automation.common.paths import REPO
+
 IMAP_HOST = "imap.gmail.com"
 # All Mail also covers Promotions/Updates; INBOX is the fallback name.
 MAILBOXES = ('"[Gmail]/All Mail"', "INBOX")

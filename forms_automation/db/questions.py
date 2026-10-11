@@ -1,18 +1,18 @@
 """View and answer the questions stored in answers.json.
 
-    python forms_automation/questions.py list                 # everything
-    python forms_automation/questions.py list --unanswered    # still need an answer
-    python forms_automation/questions.py list --search visa
-    python forms_automation/questions.py show 12
-    python forms_automation/questions.py answer 12 2          # option number...
-    python forms_automation/questions.py answer 12 "30 days"  # ...or text
-    python forms_automation/questions.py answer 12 1,3        # several options
-    python forms_automation/questions.py answer               # walk through every unanswered one
-    python forms_automation/questions.py skip 12              # never fill this question
-    python forms_automation/questions.py clear 12             # forget the answer (ask again)
-    python forms_automation/questions.py delete 12
-    python forms_automation/questions.py export questions.csv # edit in Excel...
-    python forms_automation/questions.py import questions.csv # ...and load it back
+    python forms_automation/db/questions.py list                 # everything
+    python forms_automation/db/questions.py list --unanswered    # still need an answer
+    python forms_automation/db/questions.py list --search visa
+    python forms_automation/db/questions.py show 12
+    python forms_automation/db/questions.py answer 12 2          # option number...
+    python forms_automation/db/questions.py answer 12 "30 days"  # ...or text
+    python forms_automation/db/questions.py answer 12 1,3        # several options
+    python forms_automation/db/questions.py answer               # walk through every unanswered one
+    python forms_automation/db/questions.py skip 12              # never fill this question
+    python forms_automation/db/questions.py clear 12             # forget the answer (ask again)
+    python forms_automation/db/questions.py delete 12
+    python forms_automation/db/questions.py export questions.csv # edit in Excel...
+    python forms_automation/db/questions.py import questions.csv # ...and load it back
 """
 
 from __future__ import annotations
@@ -23,7 +23,10 @@ import re
 import sys
 from pathlib import Path
 
-from question_store import SKIP, QuestionStore
+if __package__ in (None, ""):  # run as a file: make the forms_automation package importable
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from forms_automation.db.question_store import SKIP, QuestionStore
 
 
 def shown_answer(row: dict) -> str:

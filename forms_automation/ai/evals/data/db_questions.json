@@ -1,0 +1,146 @@
+[
+ {
+  "id": 1,
+  "question": "are you willing to travel up to 20",
+  "type": null,
+  "company": "",
+  "expected_head": "travel",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 2,
+  "question": "what level of security clearance do you currently hold",
+  "type": null,
+  "company": "",
+  "expected_head": "security_clearance",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 3,
+  "question": "By selecting \"I agree,\" I understand that the information I have provided as part of this job application will be processed in accordance with Reddit's Candidate Privacy Policy.",
+  "type": "select",
+  "company": "reddit",
+  "expected_head": "agreement",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 4,
+  "question": "Are you a person of transgender experience?",
+  "type": "select",
+  "company": "reddit",
+  "expected_head": "transgender_status",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 5,
+  "question": "What sexual orientation do you most closely identify with?",
+  "type": "multiselect",
+  "company": "reddit",
+  "expected_head": "sexual_orientation",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 6,
+  "question": "Please select up to 2 ethnicities that you most closely identify with.",
+  "type": "multiselect",
+  "company": "reddit",
+  "expected_head": "ethnicity",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 7,
+  "question": "Please provide the name of your current (or most recent) company",
+  "type": "text",
+  "company": "reddit",
+  "expected_head": "current_company",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 8,
+  "question": "Have you worked for Datacor or a subsidiary (TrackAbout, Chemstations, Format Solutions, AFT, etc) previously?",
+  "type": "select",
+  "company": "datacor",
+  "expected_head": "worked_here_before",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 9,
+  "question": "Please confirm you are currently enrolled in a Master's or PhD program.",
+  "type": "select",
+  "company": "datacor",
+  "expected_head": "education_status",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 10,
+  "question": "Please include your earliest start date and latest end date.",
+  "type": "text",
+  "company": "datacor",
+  "expected_head": "availability_dates",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 11,
+  "question": "Please include where you will be located during the duration of the internship (city, state).",
+  "type": "text",
+  "company": "datacor",
+  "expected_head": "location",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 12,
+  "question": "Please include the university you are currently enrolled in.",
+  "type": "text",
+  "company": "datacor",
+  "expected_head": "university",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 13,
+  "question": "Please include what degree you are currently pursuing in addition to major(s) and any minor(s).",
+  "type": "text",
+  "company": "datacor",
+  "expected_head": "degree",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 14,
+  "question": "Please include your expected graduation date (month and year).",
+  "type": "text",
+  "company": "datacor",
+  "expected_head": "graduation_date",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 15,
+  "question": "If you are a referral, please include who referred you.",
+  "type": "text",
+  "company": "datacor",
+  "expected_head": "referral",
+  "expected_mode": "reuse"
+ },
+ {
+  "id": 16,
+  "question": "If you selected other, please include more details below.",
+  "type": "text",
+  "company": "datacor",
+  "expected_head": "other_details",
+  "expected_mode": "generate"
+ },
+ {
+  "id": 17,
+  "question": "Please write a few sentences around what you are looking to gain from an internship.",
+  "type": "textarea",
+  "company": "datacor",
+  "expected_head": "motivation",
+  "expected_mode": "generate"
+ },
+ {
+  "id": 18,
+  "question": "Are you a veteran/have you served in the military?",
+  "type": "select",
+  "company": "reddit",
+  "expected_head": "veteran_status",
+  "expected_mode": "reuse"
+ }
+]

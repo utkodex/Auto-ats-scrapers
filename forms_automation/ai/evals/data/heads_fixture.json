@@ -1,0 +1,182 @@
+[
+ {
+  "id": "travel",
+  "description": "Willingness to travel for the job",
+  "examples": [
+   "are you willing to travel up to 20"
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "security_clearance",
+  "description": "Current security clearance level",
+  "examples": [
+   "what level of security clearance do you currently hold"
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "agreement",
+  "description": "Agreement to the application privacy and data terms",
+  "examples": [
+   "By selecting \"I agree,\" I understand that the information I have provided as part of this job application will be processed in accordance with Reddit's Candidate Privacy Policy."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "transgender_status",
+  "description": "Whether the candidate identifies as transgender",
+  "examples": [
+   "Are you a person of transgender experience?"
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "sexual_orientation",
+  "description": "Self-identified sexual orientation",
+  "examples": [
+   "What sexual orientation do you most closely identify with?"
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "ethnicity",
+  "description": "Self-identified ethnicity",
+  "examples": [
+   "Please select up to 2 ethnicities that you most closely identify with."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "current_company",
+  "description": "Name of the current or most recent employer",
+  "examples": [
+   "Please provide the name of your current (or most recent) company"
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "worked_here_before",
+  "description": "Whether the candidate has worked for the hiring company or its subsidiaries before",
+  "examples": [
+   "Have you worked for Datacor or a subsidiary (TrackAbout, Chemstations, Format Solutions, AFT, etc) previously?"
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "education_status",
+  "description": "Whether the candidate is currently enrolled in a Master's or PhD program",
+  "examples": [
+   "Please confirm you are currently enrolled in a Master's or PhD program."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "availability_dates",
+  "description": "Earliest start date and latest end date",
+  "examples": [
+   "Please include your earliest start date and latest end date."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "location",
+  "description": "Where the candidate will be located during the internship",
+  "examples": [
+   "Please include where you will be located during the duration of the internship (city, state)."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "university",
+  "description": "Name of the university the candidate is currently enrolled in",
+  "examples": [
+   "Please include the university you are currently enrolled in."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "degree",
+  "description": "Current degree and major(s)/minor(s)",
+  "examples": [
+   "Please include what degree you are currently pursuing in addition to major(s) and any minor(s)."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "graduation_date",
+  "description": "Expected graduation date",
+  "examples": [
+   "Please include your expected graduation date (month and year)."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "referral",
+  "description": "Who referred the candidate",
+  "examples": [
+   "If you are a referral, please include who referred you."
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ },
+ {
+  "id": "other_details",
+  "description": "More details after choosing 'Other' in a previous question",
+  "examples": [
+   "If you selected other, please include more details below."
+  ],
+  "mode": "generate",
+  "auto_fill": false,
+  "status": "approved"
+ },
+ {
+  "id": "motivation",
+  "description": "What the candidate wants to gain from the internship",
+  "examples": [
+   "Please write a few sentences around what you are looking to gain from an internship."
+  ],
+  "mode": "generate",
+  "auto_fill": false,
+  "status": "approved"
+ },
+ {
+  "id": "veteran_status",
+  "description": "Veteran or military service status",
+  "examples": [
+   "Are you a veteran/have you served in the military?"
+  ],
+  "mode": "reuse",
+  "auto_fill": true,
+  "status": "approved"
+ }
+]
